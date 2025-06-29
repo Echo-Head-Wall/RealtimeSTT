@@ -1,0 +1,52 @@
+[project]
+name = "RealtimeSTT"
+version = "0.3.104"
+description = "Easy-to-use, low-latency speech-to-text library for realtime applications"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Kolja Beigel", email = "kolja.beigel@web.de"},
+]
+keywords = ["speech-to-text", "realtime", "audio", "transcription", "whisper"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "PyAudio==0.2.14",
+    "faster-whisper==1.1.0",
+    "pvporcupine==1.9.5",
+    "webrtcvad-wheels==2.0.14",
+    "halo==0.0.31",
+    "scipy==1.14.1",
+    "websockets==14.1",
+    "websocket-client==1.8.0",
+    "openwakeword>=0.4.0",
+    "numpy<2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/KoljaB/RealtimeSTT"
+Documentation = "https://github.com/KoljaB/RealtimeSTT"
+Repository = "https://github.com/KoljaB/RealtimeSTT"
+Issues = "https://github.com/KoljaB/RealtimeSTT/issues"
+
+[project.scripts]
+stt = "RealtimeSTT.cli:main"
+stt-server = "RealtimeSTT_server.server:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["RealtimeSTT", "RealtimeSTT_server"]

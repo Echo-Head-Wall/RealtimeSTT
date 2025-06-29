@@ -10,6 +10,7 @@
 
 ## New
 
+- Wake word identification: The library now supports identifying which specific wake word was detected when using multiple wake words. The `on_wakeword_detected` callback now receives the wake word name, and you can use `get_last_detected_wake_word()` to retrieve the last detected wake word.
 - AudioToTextRecorderClient class, which automatically starts a server if none is running and connects to it. The class shares the same interface as AudioToTextRecorder, making it easy to upgrade or switch between the two. (Work in progress, most parameters and callbacks of AudioToTextRecorder are already implemented into AudioToTextRecorderClient, but not all. Also the server can not handle concurrent (parallel) requests yet.)
 - reworked CLI interface ("stt-server" to start the server, "stt" to start the client, look at "server" folder for more info)
 
@@ -288,6 +289,28 @@ print('Say "Jarvis" then speak.')
 print(recorder.text())
 ```
 
+#### Wake Word Identification
+
+RealtimeSTT now supports identifying which specific wake word was detected when using multiple wake words. This allows you to create different behaviors based on which wake word was used:
+
+```python
+def on_wakeword_detected(wake_word_name=None):
+    if wake_word_name:
+        print(f"Wake word '{wake_word_name}' detected!")
+    else:
+        print("Wake word detected!")
+
+recorder = AudioToTextRecorder(
+    wake_words="jarvis,computer,terminator",
+    on_wakeword_detected=on_wakeword_detected
+)
+
+# Get the last detected wake word
+last_wake_word = recorder.get_last_detected_wake_word()
+if last_wake_word:
+    print(f"Last used wake word: {last_wake_word}")
+```
+
 #### Standalone Example:
 
 ```python
@@ -544,13 +567,25 @@ When you initialize the `AudioToTextRecorder` class, you have various options to
 
 - **wake_word_buffer_duration** (float, default=0.1): Duration in seconds to buffer audio data during wake word detection. This helps in cutting out the wake word from the recording buffer so it does not falsely get detected along with the following spoken text, ensuring cleaner and more accurate transcription start triggers. Increase this if parts of the wake word get detected as text.
 
-- **on_wakeword_detected**: A callable function triggered when a wake word is detected.
+- **on_wakeword_detected**: A callable function triggered when a wake word is detected. The function receives the detected wake word name as an optional parameter (e.g., `def on_wakeword_detected(wake_word_name=None)`).
 
 - **on_wakeword_timeout**: A callable function triggered when the system goes back to an inactive state after when no speech was detected after wake word activation.
 
 - **on_wakeword_detection_start**: A callable function triggered when the system starts to listen for wake words
 
 - **on_wakeword_detection_end**: A callable function triggered when stopping to listen for wake words (e.g. because of timeout or wake word detected)
+
+### Methods
+
+#### Recording Control
+
+- **text(on_transcription_finished=None)**: Waits for voice activity and returns the transcription. If a callback is provided, it will be called with the transcription and the method returns immediately.
+
+- **start()**: Manually starts the recording process.
+
+- **stop()**: Manually stops the recording process.
+
+- **get_last_detected_wake_word()**: Returns the name of the last detected wake word, or None if no wake word was detected. Useful for identifying which wake word triggered the recording when using multiple wake words.
 
 ## OpenWakeWord  
 
