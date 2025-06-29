@@ -335,9 +335,10 @@ def on_vad_detect_stop(loop):
     })
     asyncio.run_coroutine_threadsafe(audio_queue.put(message), loop)
 
-def on_wakeword_detected(loop):
+def on_wakeword_detected(wake_word_name, loop):
     message = json.dumps({
-        'type': 'wakeword_detected'
+        'type': 'wakeword_detected',
+        'wake_word_name': wake_word_name
     })
     asyncio.run_coroutine_threadsafe(audio_queue.put(message), loop)
 

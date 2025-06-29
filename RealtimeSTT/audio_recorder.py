@@ -653,6 +653,7 @@ class AudioToTextRecorder:
         self.halo = None
         self.state = "inactive"
         self.wakeword_detected = False
+        self.detected_wake_word_name = None
         self.text_storage = []
         self.realtime_stabilized_text = ""
         self.realtime_stabilized_safetext = ""
@@ -1591,6 +1592,7 @@ class AudioToTextRecorder:
     def _process_wakeword(self, data):
         """
         Processes audio data to detect wake words.
+        Returns a tuple of (index, wake_word_name) or (-1, None) if no wake word detected.
         """
         if self.wakeword_backend in {'pvp', 'pvporcupine'}:
             pcm = struct.unpack_from(
@@ -1600,33 +1602,38 @@ class AudioToTextRecorder:
             porcupine_index = self.porcupine.process(pcm)
             if self.debug_mode:
                 logger.info(f"wake words porcupine_index: {porcupine_index}")
-            return porcupine_index
+            if porcupine_index >= 0 and porcupine_index < len(self.wake_words_list):
+                return porcupine_index, self.wake_words_list[porcupine_index]
+            return porcupine_index, None
 
         elif self.wakeword_backend in {'oww', 'openwakeword', 'openwakewords'}:
             pcm = np.frombuffer(data, dtype=np.int16)
             prediction = self.owwModel.predict(pcm)
             max_score = -1
             max_index = -1
+            max_model_name = None
             wake_words_in_prediction = len(self.owwModel.prediction_buffer.keys())
             self.wake_words_sensitivities
             if wake_words_in_prediction:
-                for idx, mdl in enumerate(self.owwModel.prediction_buffer.keys()):
+                model_names = list(self.owwModel.prediction_buffer.keys())
+                for idx, mdl in enumerate(model_names):
                     scores = list(self.owwModel.prediction_buffer[mdl])
                     if scores[-1] >= self.wake_words_sensitivity and scores[-1] > max_score:
                         max_score = scores[-1]
                         max_index = idx
+                        max_model_name = mdl
                 if self.debug_mode:
-                    logger.info(f"wake words oww max_index, max_score: {max_index} {max_score}")
-                return max_index  
+                    logger.info(f"wake words oww max_index, max_score, model: {max_index} {max_score} {max_model_name}")
+                return max_index, max_model_name
             else:
                 if self.debug_mode:
                     logger.info(f"wake words oww_index: -1")
-                return -1
+                return -1, None
 
         if self.debug_mode:        
             logger.info("wake words no match")
 
-        return -1
+        return -1, None
 
     def text(self,
              on_transcription_finished=None,
@@ -1702,6 +1709,7 @@ class AudioToTextRecorder:
         self.realtime_stabilized_text = ""
         self.realtime_stabilized_safetext = ""
         self.wakeword_detected = False
+        self.detected_wake_word_name = None
         self.wake_word_detect_time = 0
         self.frames = []
         if frames:
@@ -1820,6 +1828,15 @@ class AudioToTextRecorder:
         """
         logger.info("Setting microphone to: " + str(microphone_on))
         self.use_microphone.value = microphone_on
+
+    def get_last_detected_wake_word(self):
+        """
+        Get the name of the last detected wake word.
+        
+        Returns:
+            str or None: The name of the last detected wake word, or None if no wake word was detected.
+        """
+        return self.detected_wake_word_name
 
     def shutdown(self):
         """
@@ -2033,7 +2050,7 @@ class AudioToTextRecorder:
                         try:
                             if self.use_extended_logging:
                                 logger.debug('Debug: Processing wakeword')
-                            wakeword_index = self._process_wakeword(data)
+                            wakeword_index, wake_word_name = self._process_wakeword(data)
 
                         except struct.error:
                             logger.error("Error unpacking audio data "
@@ -2054,10 +2071,11 @@ class AudioToTextRecorder:
                             wakeword_detected_time = time.time()
                             wakeword_samples_to_remove = int(self.sample_rate * self.wake_word_buffer_duration)
                             self.wakeword_detected = True
+                            self.detected_wake_word_name = wake_word_name
                             if self.on_wakeword_detected:
                                 if self.use_extended_logging:
                                     logger.debug('Debug: Calling on_wakeword_detected')
-                                self._run_callback(self.on_wakeword_detected)
+                                self._run_callback(self.on_wakeword_detected, wake_word_name)
 
                     if self.use_extended_logging:
                         logger.debug('Debug: Checking voice activity conditions')
@@ -2279,6 +2297,7 @@ class AudioToTextRecorder:
                             logger.debug('Debug: Calling on_wakeword_timeout')
                         self._run_callback(self.on_wakeword_timeout)
                     self.wakeword_detected = False
+                    self.detected_wake_word_name = None
 
                 if self.use_extended_logging:
                     logger.debug('Debug: Updating was_recording')

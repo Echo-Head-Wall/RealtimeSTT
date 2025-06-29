@@ -743,7 +743,11 @@ class AudioToTextRecorderClient:
                     self.on_turn_detection_stop()
             elif data.get('type') == 'wakeword_detected':
                 if self.on_wakeword_detected:
-                    self.on_wakeword_detected()
+                    wake_word_name = data.get('wake_word_name')
+                    if wake_word_name:
+                        self.on_wakeword_detected(wake_word_name)
+                    else:
+                        self.on_wakeword_detected()
             elif data.get('type') == 'wakeword_detection_start':
                 if self.on_wakeword_detection_start:
                     self.on_wakeword_detection_start()
